@@ -2,7 +2,7 @@
 
 ---
 
-One liner: Fast MCP semantic search 
+One liner: Fast MCP semantic search for SEC EDGAR database (10-Q + 10-K)
 
 - There are 2 main SEC datasets
     1. Company Facts 
@@ -35,3 +35,7 @@ Files like CIK0000001750-submissions-001.json can be ignored, since those are fo
 pip install -r requirements.txt
 python remote-mcp-boilerplate.py  # serves http://localhost:8080/mcp
 ```
+
+- [ ] MCP wrapper for SEC API ("AAPL" -> "CIK" -> SEC specific URL -> markdown)
+- [ ] bring SEC files into pinecone vector db
+- [ ] add semantic search to MCP
