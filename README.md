@@ -1,5 +1,7 @@
 # MCP for SEC EDGAR Database semantic search
 
+Live at -> https://mcp-sec-edgar-336274559375.us-central1.run.app/mcp
+
 ---
 
 One liner: Fast MCP semantic search for SEC EDGAR database (10-Q + 10-K)
@@ -36,6 +38,7 @@ pip install -r requirements.txt
 python remote-mcp-boilerplate.py  # serves http://localhost:8080/mcp
 ```
 
+- [x] simple MCP for ticker to CIK
 - [ ] MCP wrapper for SEC API ("AAPL" -> "CIK" -> SEC specific URL -> markdown)
 - [ ] bring SEC files into pinecone vector db
 - [ ] add semantic search to MCP
