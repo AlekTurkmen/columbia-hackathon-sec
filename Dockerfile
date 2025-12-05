@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code and data files
-COPY remote-mcp-boilerplate.py .
+COPY remote-mcp.py .
 COPY company-tickers.json .
 COPY favicon.ico .
 
@@ -24,5 +24,5 @@ ENV HOST=0.0.0.0
 ENV PYTHONUNBUFFERED=1
 
 # Run the MCP server
-CMD ["python", "remote-mcp-boilerplate.py"]
+CMD ["python", "remote-mcp.py"]
 

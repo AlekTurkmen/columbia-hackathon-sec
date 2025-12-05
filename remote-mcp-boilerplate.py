@@ -16,7 +16,7 @@ import os
 import json
 import logging
 from fastmcp import FastMCP, settings  # type: ignore
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse # type: ignore
 
 # ============================================================================
 # Configure Logging for Google Cloud Run 

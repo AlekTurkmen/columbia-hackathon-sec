@@ -35,8 +35,10 @@ Files like CIK0000001750-submissions-001.json can be ignored, since those are fo
 
 ```bash
 pip install -r requirements.txt
-python remote-mcp-boilerplate.py  # serves http://localhost:8080/mcp
+python remote-mcp.py  # serves http://localhost:8080/mcp
 ```
+
+## What is done
 
 - [x] simple MCP for ticker to CIK
 - [ ] MCP wrapper for SEC API ("AAPL" -> "CIK" -> SEC specific URL -> markdown)
