@@ -11,6 +11,7 @@ on:
       - 'remote-mcp-boilerplate.py'
       - 'company-tickers.json'
       - 'Dockerfile'
+      - 'favicon.ico'
       - '.github/workflows/deploy-sec-mcp.yml'
   workflow_dispatch: # Allow manual triggers from GitHub UI
 

@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code and data files
 COPY remote-mcp-boilerplate.py .
 COPY company-tickers.json .
+COPY favicon.ico .
 
 # Expose port 8080 (Cloud Run default)
 EXPOSE 8080

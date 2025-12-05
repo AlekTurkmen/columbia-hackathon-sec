@@ -1,6 +1,6 @@
 # MCP for SEC EDGAR Database semantic search
 
-Live at -> https://mcp-sec-edgar-336274559375.us-central1.run.app/mcp
+Live at -> https://mcp-sec-edgar-336274559375.us-central1.run.app/mcp (must be using an officla MCP connector tool like [Claude](https://claude.ai/new), [Chat-GPT](https://chatgpt.com/) or [MCP Inspector Tool](https://github.com/modelcontextprotocol/inspector))
 
 ---
 

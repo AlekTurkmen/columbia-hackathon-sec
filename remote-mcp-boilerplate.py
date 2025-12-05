@@ -16,6 +16,7 @@ import os
 import json
 import logging
 from fastmcp import FastMCP, settings  # type: ignore
+from starlette.responses import FileResponse
 
 # ============================================================================
 # Configure Logging for Google Cloud Run 
@@ -90,6 +91,19 @@ TICKER_TO_CIK = load_ticker_to_cik_mapping()
 # ============================================================================
 
 mcp = FastMCP("sec-edgar")
+
+# ============================================================================
+# Favicon Route
+# ============================================================================
+
+# Get the path to favicon.ico
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FAVICON_PATH = os.path.join(SCRIPT_DIR, "favicon.ico")
+
+@mcp.custom_route("/favicon.ico", methods=["GET"])
+async def favicon_endpoint(request):
+    """Serve the favicon.ico file."""
+    return FileResponse(FAVICON_PATH, media_type="image/x-icon")
 
 # ============================================================================
 # MCP Tools
