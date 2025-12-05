@@ -1,19 +1,30 @@
-name: Deploy SEC MCP Server to Cloud Run
+name: Deploy SEC EDGAR MCP Server to Cloud Run
+
+# This workflow deploys the SEC EDGAR MCP server to Google Cloud Run
+# Provides stock ticker to CIK lookup functionality
 
 on:
   push:
     branches:
       - main
     paths:
-      - '**'
+      - 'remote-mcp-boilerplate.py'
+      - 'company-tickers.json'
+      - 'Dockerfile'
       - '.github/workflows/deploy-sec-mcp.yml'
-  workflow_dispatch:
+  workflow_dispatch: # Allow manual triggers from GitHub UI
 
 env:
-  PROJECT_ID: your-gcp-project-id
-  SERVICE_NAME: mcp-sec
+  # Google Cloud Configuration (same project as broker MCP)
+  PROJECT_ID: silk-hedge-fund
   REGION: us-central1
-  CUSTOM_DOMAIN: sec.silk.fund
+  
+  # Service Configuration
+  SERVICE_NAME: mcp-sec-edgar
+  
+  # Service Account (uses same GitHub Actions SA as broker MCP)
+  SERVICE_ACCOUNT: github-actions-sa@silk-hedge-fund.iam.gserviceaccount.com
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/336274559375/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
 
 jobs:
   deploy:
@@ -24,38 +35,113 @@ jobs:
       id-token: write
 
     steps:
+    # ========================================================================
+    # Step 1: Checkout Repository Code
+    # ========================================================================
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # ========================================================================
+    # Step 2: Authenticate with Google Cloud
+    # ========================================================================
+    # Uses Workload Identity Federation (no service account keys needed)
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
-        workload_identity_provider: 'projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-        service_account: 'github-actions-sa@your-project.iam.gserviceaccount.com'
+        workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ env.SERVICE_ACCOUNT }}
 
+    # ========================================================================
+    # Step 3: Setup Google Cloud SDK
+    # ========================================================================
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
-    - name: Configure Docker
+    # ========================================================================
+    # Step 4: Configure Docker Authentication
+    # ========================================================================
+    # Allows Docker to push images to Google Artifact Registry
+    - name: Configure Docker to use gcloud as credential helper
       run: |
-        gcloud auth configure-docker us-central1-docker.pkg.dev
+        gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-    - name: Build and Push Docker image
+    # ========================================================================
+    # Step 5: Create Artifact Registry Repository (if doesn't exist)
+    # ========================================================================
+    # Shared repository for all MCP server images
+    - name: Create Artifact Registry repository if needed
       run: |
-        docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/mcp-servers/$SERVICE_NAME:$GITHUB_SHA .
-        docker push us-central1-docker.pkg.dev/$PROJECT_ID/mcp-servers/$SERVICE_NAME:$GITHUB_SHA
+        gcloud artifacts repositories create mcp-servers \
+          --repository-format=docker \
+          --location=${{ env.REGION }} \
+          --description="MCP Server Container Images" \
+          --project=${{ env.PROJECT_ID }} || echo "Repository already exists"
 
+    # ========================================================================
+    # Step 6: Build Docker Image
+    # ========================================================================
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/mcp-servers/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+        docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/mcp-servers/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+                   ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/mcp-servers/${{ env.SERVICE_NAME }}:latest
+
+    # ========================================================================
+    # Step 7: Push Docker Image to Artifact Registry
+    # ========================================================================
+    - name: Push Docker image to Artifact Registry
+      run: |
+        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/mcp-servers/${{ env.SERVICE_NAME }}:${{ github.sha }}
+        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/mcp-servers/${{ env.SERVICE_NAME }}:latest
+
+    # ========================================================================
+    # Step 8: Deploy to Google Cloud Run
+    # ========================================================================
     - name: Deploy to Cloud Run
       run: |
-        gcloud run deploy $SERVICE_NAME \
-          --image us-central1-docker.pkg.dev/$PROJECT_ID/mcp-servers/$SERVICE_NAME:$GITHUB_SHA \
+        gcloud run deploy ${{ env.SERVICE_NAME }} \
+          --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/mcp-servers/${{ env.SERVICE_NAME }}:${{ github.sha }} \
           --platform managed \
-          --region $REGION \
+          --region ${{ env.REGION }} \
           --allow-unauthenticated \
           --port 8080 \
-          --set-env-vars USER_AGENT="${{ secrets.SEC_USER_AGENT }}" \
+          --set-env-vars HOST=0.0.0.0 \
           --max-instances 10 \
+          --min-instances 0 \
           --memory 512Mi \
           --cpu 1 \
-          --timeout 600
+          --timeout 600 \
+          --concurrency 80 \
+          --cpu-throttling \
+          --session-affinity
 
+    # ========================================================================
+    # Step 9: Output Deployment Information
+    # ========================================================================
+    - name: Get and display service URL
+      run: |
+        SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+          --region ${{ env.REGION }} \
+          --format 'value(status.url)')
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "✅ SEC EDGAR MCP Server Deployed!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Service Name: ${{ env.SERVICE_NAME }}"
+        echo "Region: ${{ env.REGION }}"
+        echo "MCP Endpoint: ${SERVICE_URL}/mcp"
+        echo ""
+        echo "📈 Tool: get_cik_from_ticker"
+        echo "   Convert stock tickers (AAPL, NVDA) to SEC CIK identifiers"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================================================
+# DEPLOYMENT CONFIGURATION REFERENCE
+# ============================================================================
+#
+# This SEC EDGAR MCP server requires NO secrets - it uses a bundled
+# company-tickers.json file for ticker-to-CIK lookups.
+#
+# No GCP credentials needed - uses Workload Identity Federation
+#
+# ============================================================================
