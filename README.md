@@ -1,46 +1,82 @@
-# MCP for SEC EDGAR Database semantic search
+# SEC EDGAR MCP Server
 
-Live at -> https://mcp-sec-edgar-336274559375.us-central1.run.app/mcp (must be using an officla MCP connector tool like [Claude](https://claude.ai/new), [Chat-GPT](https://chatgpt.com/) or [MCP Inspector Tool](https://github.com/modelcontextprotocol/inspector))
+**Live:** https://mcp-sec-edgar-336274559375.us-central1.run.app/mcp
+
+A single MCP tool that retrieves and parses SEC financial filings (10-Q and 10-K).
 
 ---
 
-One liner: Fast MCP semantic search for SEC EDGAR database (10-Q + 10-K)
+## MCP Tool: `get_sec_filing`
 
-- There are 2 main SEC datasets
-    1. Company Facts 
-        1. [1.34 GB ZIP - 18,360,620,696 bytes (18.4 GB on disk) for 19,051 item]
-    2. Submission 
-        1. [1.49 GB ZIP - 5,359,128,717 bytes (7.52 GB on disk) for 946,190 items]
-- There are 4 main SEC endpoints
-    1. [data.sec.gov/submissions/AAPL](http://data.sec.gov/submissions/AAPL) → CIK
-        1. https://data.sec.gov/submissions/CIK##########.json
-    2. data.sec.gov/api/xbrl/companyconcept/
-        1. https://data.sec.gov/api/xbrl/companyconcept/CIK##########/us-gaap/AccountsPayableCurrent.json
-    3. data.sec.gov/api/xbrl/companyfacts/
-        1. https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json
-    4. data.sec.gov/api/xbrl/frames/
-        1. https://data.sec.gov/api/xbrl/frames/us-gaap/AccountsPayableCurrent/USD/CY2019Q1I.json
+Converts a ticker + date range into structured financial data.
 
-For CIK → Ticker Mapping (CIK0000320193 → $APPL)
+### Parameters
 
-https://www.sec.gov/files/company_tickers.json
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `ticker` | string | Stock ticker symbol | `"AAPL"` |
+| `start_date` | string | Start date (YYYY-MM-DD) | `"2024-01-01"` |
+| `end_date` | string | End date (YYYY-MM-DD) | `"2025-12-31"` |
+| `form_type` | string | `"10-Q"` (quarterly) or `"10-K"` (annual) | `"10-Q"` |
+| `output_format` | string | `"markdown"` or `"json"` | `"markdown"` |
 
-API has 10 requests/sec rate limit based on IP
+### Example Usage
 
-Files like CIK0000001750-submissions-001.json can be ignored, since those are for fillings that are very old (first json file has most recent 1,000 fillings)
+```
+get_sec_filing("AAPL", "2024-01-01", "2024-12-31", "10-Q", "markdown")
+```
+
+Returns a formatted financial report with:
+- Key metrics (Revenue, Net Income, Assets, etc.)
+- All XBRL facts from the filing
 
 ---
 
 ## Quick Start
 
 ```bash
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
-python remote-mcp.py  # serves http://localhost:8080/mcp
+
+# Run server
+python server.py
 ```
 
-## What is done
+Server runs at: `http://localhost:8080/mcp`
 
-- [x] simple MCP for ticker to CIK
-- [ ] MCP wrapper for SEC API ("AAPL" -> "CIK" -> SEC specific URL -> markdown)
-- [ ] bring SEC files into pinecone vector db
-- [ ] add semantic search to MCP
+---
+
+## Architecture
+
+```
+Ticker → CIK Lookup → SEC API → XBRL XML → Parse → JSON/Markdown
+```
+
+1. **Ticker → CIK**: Uses `company-tickers.json` (10,000+ companies)
+2. **SEC API**: Fetches filing index, finds `_htm.xml` files
+3. **XBRL Parser**: Extracts contexts, units, and facts
+4. **Converter**: Outputs markdown report or structured JSON
+
+---
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `server.py` | Unified MCP server |
+| `company-tickers.json` | Ticker → CIK mapping |
+| `Dockerfile` | Cloud Run deployment |
+
+---
+
+## Done
+
+- [x] Ticker to CIK conversion
+- [x] SEC filing XML download (10-Q, 10-K)
+- [x] XBRL parsing to JSON
+- [x] Markdown report generation
+- [x] Unified MCP tool
