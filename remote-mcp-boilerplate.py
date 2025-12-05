@@ -18,7 +18,7 @@ import logging
 from fastmcp import FastMCP, settings  # type: ignore
 
 # ============================================================================
-# Configure Logging for Google Cloud Run
+# Configure Logging for Google Cloud Run 
 # ============================================================================
 
 logging.basicConfig(
