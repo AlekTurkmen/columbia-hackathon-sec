@@ -1,0 +1,10 @@
+# SEC MCP Server - Dependencies
+
+# FastMCP protocol server framework
+fastmcp>=2.12.0
+
+# HTTP requests for SEC API
+requests>=2.31.0
+
+# Environment variable management
+python-dotenv>=1.0.0

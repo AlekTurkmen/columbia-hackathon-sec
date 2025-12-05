@@ -26,3 +26,12 @@ https://www.sec.gov/files/company_tickers.json
 API has 10 requests/sec rate limit based on IP
 
 Files like CIK0000001750-submissions-001.json can be ignored, since those are for fillings that are very old (first json file has most recent 1,000 fillings)
+
+---
+
+## Quick Start
+
+```bash
+pip install -r requirements.txt
+python remote-mcp-boilerplate.py  # serves http://localhost:8080/mcp
+```

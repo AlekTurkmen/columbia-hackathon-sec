@@ -1,0 +1,61 @@
+name: Deploy SEC MCP Server to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+      - '.github/workflows/deploy-sec-mcp.yml'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: your-gcp-project-id
+  SERVICE_NAME: mcp-sec
+  REGION: us-central1
+  CUSTOM_DOMAIN: sec.silk.fund
+
+jobs:
+  deploy:
+    name: Deploy SEC MCP to Cloud Run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: 'projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+        service_account: 'github-actions-sa@your-project.iam.gserviceaccount.com'
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker
+      run: |
+        gcloud auth configure-docker us-central1-docker.pkg.dev
+
+    - name: Build and Push Docker image
+      run: |
+        docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/mcp-servers/$SERVICE_NAME:$GITHUB_SHA .
+        docker push us-central1-docker.pkg.dev/$PROJECT_ID/mcp-servers/$SERVICE_NAME:$GITHUB_SHA
+
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy $SERVICE_NAME \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/mcp-servers/$SERVICE_NAME:$GITHUB_SHA \
+          --platform managed \
+          --region $REGION \
+          --allow-unauthenticated \
+          --port 8080 \
+          --set-env-vars USER_AGENT="${{ secrets.SEC_USER_AGENT }}" \
+          --max-instances 10 \
+          --memory 512Mi \
+          --cpu 1 \
+          --timeout 600
+
